@@ -47,3 +47,4 @@ storybook-static
 *.tsbuildinfo
 next-env.d.ts
 test-plan.md
+.github/workflows/
