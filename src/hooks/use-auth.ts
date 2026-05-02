@@ -1,178 +1,142 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { apiClient } from '@/lib/api/client';
-import { endpoints } from '@/lib/api/endpoints';
-import type {
-  LoginCredentials,
-  RegisterData,
-  ForgotPasswordData,
-  ResetPasswordData,
-  MfaVerifyData,
-  User,
-  AuthTokens,
-} from '@/types/auth';
-import { routes } from '@/config/site';
+import { useAppDispatch, useAppSelector, authActions } from '@/store';
+import {
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useVerifyMfaMutation,
+} from '@/store/endpoints/authApi';
+import { toast } from '@/lib/toast';
+import type { LoginCredentials, RegisterData, ForgotPasswordData, ResetPasswordData, MfaVerifyData } from '@/types/auth';
 
+/**
+ * Auth hook — login, logout, register, forgot/reset password, MFA with one call.
+ *
+ * @example
+ * ```tsx
+ * const { user, isAuthenticated, login, logout, register } = useAuth();
+ *
+ * await login({ email: 'user@example.com', password: 'pass' });
+ * await forgotPassword({ email: 'user@example.com' });
+ * logout();
+ * ```
+ */
 export function useAuth() {
-  const router = useRouter();
-  const {
-    user,
-    tokens,
-    isAuthenticated,
-    isLoading,
-    mfaPending,
-    error,
-    login: storeLogin,
-    logout: storeLogout,
-    setLoading,
-    setError,
-    setMfaPending,
-    updateUser,
-  } = useAuthStore();
+  const dispatch = useAppDispatch();
+  const auth = useAppSelector((state) => state.auth);
+  const [loginMutation, loginState] = useLoginMutation();
+  const [registerMutation, registerState] = useRegisterMutation();
+  const [logoutMutation] = useLogoutMutation();
+  const [forgotPasswordMutation, forgotPasswordState] = useForgotPasswordMutation();
+  const [resetPasswordMutation, resetPasswordState] = useResetPasswordMutation();
+  const [verifyMfaMutation, verifyMfaState] = useVerifyMfaMutation();
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
-      setLoading(true);
-      setError(null);
       try {
-        const response = await apiClient.post<{
-          user: User;
-          tokens: AuthTokens;
-          mfaRequired?: boolean;
-        }>(endpoints.auth.login, credentials);
-
-        if (response.data.mfaRequired) {
-          setMfaPending(true);
-          router.push(routes.auth.mfa);
-          return;
-        }
-
-        storeLogin(response.data.user, response.data.tokens);
-        router.push(routes.dashboard.home);
+        const result = await loginMutation(credentials).unwrap();
+        dispatch(authActions.login({ user: result.data.user, tokens: result.data.tokens }));
+        toast.success('Welcome back!', `Signed in as ${result.data.user.email}`);
+        return result.data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Login failed';
-        setError(message);
+        const message = (err as { data?: { message?: string } })?.data?.message ?? 'Login failed';
+        toast.error('Login failed', message);
         throw err;
-      } finally {
-        setLoading(false);
       }
     },
-    [router, storeLogin, setLoading, setError, setMfaPending]
+    [dispatch, loginMutation]
   );
 
   const register = useCallback(
     async (data: RegisterData) => {
-      setLoading(true);
-      setError(null);
       try {
-        const response = await apiClient.post<{
-          user: User;
-          tokens: AuthTokens;
-        }>(endpoints.auth.register, data);
-
-        storeLogin(response.data.user, response.data.tokens);
-        router.push(routes.dashboard.home);
+        const result = await registerMutation(data).unwrap();
+        dispatch(authActions.login({ user: result.data.user, tokens: result.data.tokens }));
+        toast.success('Account created!', 'Welcome aboard');
+        return result.data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Registration failed';
-        setError(message);
+        const message = (err as { data?: { message?: string } })?.data?.message ?? 'Registration failed';
+        toast.error('Registration failed', message);
         throw err;
-      } finally {
-        setLoading(false);
       }
     },
-    [router, storeLogin, setLoading, setError]
+    [dispatch, registerMutation]
   );
-
-  const logout = useCallback(async () => {
-    try {
-      await apiClient.post(endpoints.auth.logout);
-    } catch {
-      // Logout even if API call fails
-    } finally {
-      storeLogout();
-      router.push(routes.auth.login);
-    }
-  }, [router, storeLogout]);
 
   const forgotPassword = useCallback(
     async (data: ForgotPasswordData) => {
-      setLoading(true);
-      setError(null);
       try {
-        await apiClient.post(endpoints.auth.forgotPassword, data);
+        const result = await forgotPasswordMutation(data).unwrap();
+        toast.success('Email sent', 'Check your inbox for the reset link');
+        return result.data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Request failed';
-        setError(message);
+        const message = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to send reset email';
+        toast.error('Error', message);
         throw err;
-      } finally {
-        setLoading(false);
       }
     },
-    [setLoading, setError]
+    [forgotPasswordMutation]
   );
 
   const resetPassword = useCallback(
     async (data: ResetPasswordData) => {
-      setLoading(true);
-      setError(null);
       try {
-        await apiClient.post(endpoints.auth.resetPassword, data);
-        router.push(routes.auth.login);
+        const result = await resetPasswordMutation(data).unwrap();
+        toast.success('Password reset', 'You can now sign in with your new password');
+        return result.data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Reset failed';
-        setError(message);
+        const message = (err as { data?: { message?: string } })?.data?.message ?? 'Failed to reset password';
+        toast.error('Error', message);
         throw err;
-      } finally {
-        setLoading(false);
       }
     },
-    [router, setLoading, setError]
+    [resetPasswordMutation]
   );
 
   const verifyMfa = useCallback(
     async (data: MfaVerifyData) => {
-      setLoading(true);
-      setError(null);
       try {
-        const response = await apiClient.post<{
-          user: User;
-          tokens: AuthTokens;
-        }>(endpoints.auth.mfa.verify, data);
-
-        storeLogin(response.data.user, response.data.tokens);
-        router.push(routes.dashboard.home);
+        const result = await verifyMfaMutation(data).unwrap();
+        dispatch(authActions.login({ user: result.data.user, tokens: result.data.tokens }));
+        toast.success('Verified', 'Two-factor authentication successful');
+        return result.data;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'MFA verification failed';
-        setError(message);
+        const message = (err as { data?: { message?: string } })?.data?.message ?? 'Verification failed';
+        toast.error('MFA failed', message);
         throw err;
-      } finally {
-        setLoading(false);
       }
     },
-    [router, storeLogin, setLoading, setError]
+    [dispatch, verifyMfaMutation]
   );
 
+  const logout = useCallback(async () => {
+    try {
+      await logoutMutation().unwrap();
+    } catch {
+      // Logout even if API call fails
+    }
+    dispatch(authActions.logout());
+    toast.info('Signed out');
+  }, [dispatch, logoutMutation]);
+
+  const isLoading = loginState.isLoading || registerState.isLoading
+    || forgotPasswordState.isLoading || resetPasswordState.isLoading
+    || verifyMfaState.isLoading;
+
   return {
-    user,
-    tokens,
-    isAuthenticated,
-    isLoading,
-    mfaPending,
-    error,
+    ...auth,
     login,
     register,
-    logout,
     forgotPassword,
     resetPassword,
     verifyMfa,
-    updateUser,
+    logout,
+    isLoading,
+    isLoginLoading: loginState.isLoading,
+    isRegisterLoading: registerState.isLoading,
   };
 }

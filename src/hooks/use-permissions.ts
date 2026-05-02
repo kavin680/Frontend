@@ -1,72 +1,46 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { useAuthStore } from '@/store/auth-store';
+import { useMemo } from 'react';
+import { useAppSelector } from '@/store';
 import type { Permission, Role } from '@/types/auth';
-import { ROLE_HIERARCHY } from '@/types/permissions';
 
+const roleHierarchy: Record<Role, number> = {
+  super_admin: 6,
+  admin: 5,
+  manager: 4,
+  member: 3,
+  viewer: 2,
+  guest: 1,
+};
+
+/**
+ * Permission hook — check user permissions and roles.
+ *
+ * @example
+ * ```tsx
+ * const { hasPermission, hasRole, hasAnyPermission } = usePermissions();
+ *
+ * if (hasPermission('users:write')) { ... }
+ * if (hasRole('admin')) { ... }
+ * ```
+ */
 export function usePermissions() {
-  const { user } = useAuthStore();
+  const user = useAppSelector((state) => state.auth.user);
 
-  const hasPermission = useCallback(
-    (permission: Permission): boolean => {
-      if (!user) return false;
-      return user.permissions.includes(permission);
-    },
-    [user]
-  );
+  const permissions = useMemo(() => new Set(user?.permissions ?? []), [user?.permissions]);
 
-  const hasAnyPermission = useCallback(
-    (permissions: Permission[]): boolean => {
-      if (!user) return false;
-      return permissions.some((p) => user.permissions.includes(p));
-    },
-    [user]
-  );
+  const hasPermission = (permission: Permission): boolean => permissions.has(permission);
 
-  const hasAllPermissions = useCallback(
-    (permissions: Permission[]): boolean => {
-      if (!user) return false;
-      return permissions.every((p) => user.permissions.includes(p));
-    },
-    [user]
-  );
+  const hasAnyPermission = (...perms: Permission[]): boolean =>
+    perms.some((p) => permissions.has(p));
 
-  const hasRole = useCallback(
-    (role: Role): boolean => {
-      if (!user) return false;
-      return user.role === role;
-    },
-    [user]
-  );
+  const hasAllPermissions = (...perms: Permission[]): boolean =>
+    perms.every((p) => permissions.has(p));
 
-  const hasMinRole = useCallback(
-    (minRole: Role): boolean => {
-      if (!user) return false;
-      return (ROLE_HIERARCHY[user.role] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0);
-    },
-    [user]
-  );
-
-  const isAdmin = useMemo(
-    () => hasMinRole('admin'),
-    [hasMinRole]
-  );
-
-  const isSuperAdmin = useMemo(
-    () => hasRole('super_admin'),
-    [hasRole]
-  );
-
-  return {
-    hasPermission,
-    hasAnyPermission,
-    hasAllPermissions,
-    hasRole,
-    hasMinRole,
-    isAdmin,
-    isSuperAdmin,
-    role: user?.role ?? null,
-    permissions: user?.permissions ?? [],
+  const hasRole = (role: Role): boolean => {
+    if (!user?.role) return false;
+    return roleHierarchy[user.role] >= roleHierarchy[role];
   };
+
+  return { hasPermission, hasAnyPermission, hasAllPermissions, hasRole, role: user?.role ?? null };
 }

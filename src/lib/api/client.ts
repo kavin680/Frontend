@@ -5,8 +5,14 @@ import axios, {
   type AxiosResponse,
 } from 'axios';
 import env from '@/config/env';
-import { useAuthStore } from '@/store/auth-store';
 import type { ApiResponse, ApiError } from '@/types/api';
+import type { AppStore } from '@/store/store';
+
+let storeInstance: AppStore | null = null;
+
+export function setApiStore(store: AppStore) {
+  storeInstance = store;
+}
 
 class ApiClient {
   private client: AxiosInstance;
@@ -27,16 +33,17 @@ class ApiClient {
 
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const { tokens } = useAuthStore.getState();
-        if (tokens?.accessToken) {
-          config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        if (storeInstance) {
+          const state = storeInstance.getState();
+          const token = state.auth.tokens?.accessToken;
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+          const tenantId = state.tenant.current?.id;
+          if (tenantId) {
+            config.headers['X-Tenant-ID'] = tenantId;
+          }
         }
-
-        const tenantId = this.getTenantId();
-        if (tenantId) {
-          config.headers['X-Tenant-ID'] = tenantId;
-        }
-
         return config;
       },
       (error) => Promise.reject(error)
@@ -63,18 +70,21 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const { tokens, setTokens } = useAuthStore.getState();
-            if (!tokens?.refreshToken) {
+            const refreshToken = storeInstance?.getState().auth.tokens?.refreshToken;
+            if (!refreshToken) {
               throw new Error('No refresh token');
             }
 
             const response = await axios.post(
               `${env.api.baseUrl}/auth/refresh`,
-              { refreshToken: tokens.refreshToken }
+              { refreshToken }
             );
 
             const newTokens = response.data.data;
-            setTokens(newTokens);
+            if (storeInstance) {
+              const { authActions } = await import('@/store/slices/authSlice');
+              storeInstance.dispatch(authActions.setTokens(newTokens));
+            }
 
             this.failedQueue.forEach(({ resolve }) =>
               resolve(newTokens.accessToken)
@@ -86,7 +96,10 @@ class ApiClient {
           } catch (refreshError) {
             this.failedQueue.forEach(({ reject }) => reject(refreshError));
             this.failedQueue = [];
-            useAuthStore.getState().logout();
+            if (storeInstance) {
+              const { authActions } = await import('@/store/slices/authSlice');
+              storeInstance.dispatch(authActions.logout());
+            }
             if (typeof window !== 'undefined') {
               window.location.href = '/auth/login';
             }
@@ -99,18 +112,6 @@ class ApiClient {
         return Promise.reject(this.normalizeError(error));
       }
     );
-  }
-
-  private getTenantId(): string | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      const tenantState = JSON.parse(
-        localStorage.getItem('tenant-storage') ?? '{}'
-      );
-      return tenantState?.state?.current?.id ?? null;
-    } catch {
-      return null;
-    }
   }
 
   private normalizeError(error: unknown): ApiError {
@@ -172,3 +173,4 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export default apiClient;

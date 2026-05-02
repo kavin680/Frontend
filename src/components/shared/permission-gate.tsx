@@ -29,8 +29,8 @@ export function PermissionGate({
 
   if (permissions && permissions.length > 0) {
     const hasAccess = requireAll
-      ? hasAllPermissions(permissions)
-      : hasAnyPermission(permissions);
+      ? hasAllPermissions(...permissions)
+      : hasAnyPermission(...permissions);
     if (!hasAccess) return <>{fallback}</>;
   }
 

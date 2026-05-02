@@ -1,31 +1,23 @@
 'use client';
 
-import { useCallback } from 'react';
-import { useFeatureFlagStore } from '@/store/feature-flag-store';
+import { useAppSelector } from '@/store';
 
+/**
+ * Feature flag hook — check if features are enabled.
+ *
+ * @example
+ * ```tsx
+ * const { isEnabled, getVariant } = useFeatureFlags();
+ *
+ * if (isEnabled('new-dashboard')) { ... }
+ * const variant = getVariant('checkout-flow'); // 'A' | 'B'
+ * ```
+ */
 export function useFeatureFlags() {
-  const { flags, isEnabled, getVariant } = useFeatureFlagStore();
+  const flags = useAppSelector((state) => state.featureFlag.flags);
 
-  const checkFlag = useCallback(
-    (key: string, defaultValue = false): boolean => {
-      if (key in flags) {
-        return isEnabled(key);
-      }
-      return defaultValue;
-    },
-    [flags, isEnabled]
-  );
+  const isEnabled = (key: string): boolean => flags[key]?.enabled ?? false;
+  const getVariant = (key: string): string | undefined => flags[key]?.variant;
 
-  const checkVariant = useCallback(
-    (key: string): string | undefined => {
-      return getVariant(key);
-    },
-    [getVariant]
-  );
-
-  return {
-    isEnabled: checkFlag,
-    getVariant: checkVariant,
-    flags,
-  };
+  return { flags, isEnabled, getVariant };
 }

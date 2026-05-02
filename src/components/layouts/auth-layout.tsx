@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Image from 'next/image';
-import { useTenantStore } from '@/store/tenant-store';
+import { useAppSelector } from '@/store';
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -11,7 +11,7 @@ interface AuthLayoutProps {
 }
 
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
-  const { current: tenant } = useTenantStore();
+  const tenant = useAppSelector((state) => state.tenant.current);
 
   return (
     <div className="min-h-screen flex">

@@ -1,207 +1,294 @@
-# Enterprise Frontend Foundation Platform
+# Frontend Base — Clone, Configure, Build
 
-A reusable, scalable, enterprise-grade frontend foundation platform for building SaaS dashboards, admin panels, CRM, ERP, billing systems, analytics dashboards, internal tools, client portals, and more.
+A plug-and-play frontend foundation. Clone → set API URL → import components → build your app.
+
+## Quick Start (5 minutes)
+
+```bash
+# 1. Clone
+git clone <repo-url> my-app && cd my-app
+
+# 2. Install
+npm install
+
+# 3. Configure API
+cp .env.example .env.local
+# Edit .env.local → set NEXT_PUBLIC_API_URL=https://your-api.com/api
+
+# 4. Run
+npm run dev
+```
+
+That's it. Everything works — auth, toasts, modals, forms, tables, themes.
 
 ## Tech Stack
 
-- **Framework:** Next.js 16 (App Router, Turbopack)
-- **UI:** React 19, TypeScript 5, Tailwind CSS v4, ShadCN/UI
-- **State:** Zustand (persisted stores)
-- **Data Fetching:** TanStack Query (React Query)
-- **HTTP Client:** Axios with interceptors
-- **Forms:** React Hook Form + Zod validation
-- **Charts:** Recharts
-- **Icons:** Lucide React
-- **Theming:** next-themes (dark/light/system)
-- **i18n:** Built-in translation system (8 locales)
-- **Testing:** Jest + Playwright
-- **DevOps:** Docker, GitHub Actions CI/CD
+- **Next.js 16** (App Router, Turbopack) + **React 19** + **TypeScript 5**
+- **Redux Toolkit** + **RTK Query** (state + API — set URL, auto-handles auth/cache/errors)
+- **Tailwind CSS v4** + **ShadCN/UI** (components with inbuilt animations)
+- **React Hook Form** + **Zod** (schema-driven validation)
+- **Recharts** (charts) + **Lucide** (icons) + **next-themes** (dark/light/system)
 
-## Quick Start
+## How to Use — Just Import and Call
 
-```bash
-# Install dependencies
-npm install
+### Toast — `toast.success()` from anywhere
 
-# Start development server
-npm run dev
+```tsx
+import { toast } from '@/lib/toast';
 
-# Build for production
-npm run build
+toast.success('User created!');
+toast.error('Something failed', 'Please try again');
+toast.warning('Unsaved changes');
+toast.info('New update available');
+```
 
-# Start production server
-npm start
+### Modal — `modal.open()` / `confirm()` from anywhere
+
+```tsx
+import { modal, confirm } from '@/lib/modal';
+
+// Open any content as modal
+modal.open(<EditUserForm userId={123} />, { title: 'Edit User', size: 'lg' });
+
+// Confirmation dialog — returns Promise<boolean>
+const ok = await confirm('Delete user?', 'This cannot be undone.', {
+  variant: 'destructive',
+  confirmText: 'Yes, delete',
+});
+if (ok) { /* delete */ }
+```
+
+### SmartForm — schema-driven, zero boilerplate
+
+```tsx
+import { SmartForm } from '@/components/forms/smart-form';
+import { z } from 'zod';
+
+const schema = z.object({
+  email: z.string().email(),
+  role: z.string(),
+});
+
+<SmartForm
+  fields={[
+    { name: 'email', type: 'email', label: 'Email', required: true },
+    { name: 'role', type: 'select', label: 'Role', options: [
+      { label: 'Admin', value: 'admin' },
+      { label: 'User', value: 'user' },
+    ]},
+  ]}
+  schema={schema}
+  onSubmit={(data) => console.log(data)}
+  submitText="Create User"
+/>
+```
+
+### DataTable — pass data + columns, get everything
+
+```tsx
+import { DataTable } from '@/components/tables/data-table';
+
+<DataTable
+  data={users}
+  columns={[
+    { key: 'name', header: 'Name', sortable: true },
+    { key: 'email', header: 'Email' },
+    { key: 'status', header: 'Status', render: (v) => <Badge>{String(v)}</Badge> },
+  ]}
+  searchable
+  pagination
+  pageSize={10}
+/>
+```
+
+### Alert — with animations
+
+```tsx
+import { Alert } from '@/components/ui/alert';
+
+<Alert variant="success" title="Saved!">Your changes have been saved.</Alert>
+<Alert variant="error" dismissible>Something went wrong.</Alert>
+<Alert variant="warning" title="Warning" action={<Button size="sm">Fix</Button>}>
+  Your session is about to expire.
+</Alert>
+```
+
+### Loaders/Skeletons — for every component type
+
+```tsx
+import { PageLoader, TableSkeleton, CardSkeleton, FormSkeleton, ChartSkeleton, StatCardSkeleton, Spinner } from '@/components/ui/loaders';
+
+<PageLoader message="Loading dashboard..." />
+<TableSkeleton rows={5} cols={4} />
+<CardSkeleton count={3} />
+<FormSkeleton fields={4} />
+<ChartSkeleton />
+<StatCardSkeleton count={4} />
+<Spinner size="lg" />
+```
+
+### Auth — login/logout/register with one hook
+
+```tsx
+import { useAuth } from '@/hooks/use-auth';
+
+function LoginPage() {
+  const { login, isLoading, error } = useAuth();
+
+  const handleLogin = async () => {
+    await login({ email: 'user@example.com', password: 'pass' });
+    // Auto-stores tokens, shows toast, redirects
+  };
+}
+```
+
+### Permissions — check anywhere
+
+```tsx
+import { usePermissions } from '@/hooks/use-permissions';
+import { PermissionGate } from '@/components/shared/permission-gate';
+
+// Hook
+const { hasPermission, hasRole } = usePermissions();
+if (hasPermission('users:write')) { /* ... */ }
+
+// Component
+<PermissionGate permissions={['billing:read']}>
+  <BillingDashboard />
+</PermissionGate>
+```
+
+### Redux State — dispatch/select
+
+```tsx
+import { useAppDispatch, useAppSelector, authActions, tenantActions } from '@/store';
+
+// Read state
+const user = useAppSelector((state) => state.auth.user);
+const tenant = useAppSelector((state) => state.tenant.current);
+
+// Dispatch actions
+const dispatch = useAppDispatch();
+dispatch(authActions.logout());
+dispatch(tenantActions.switchTenant('tenant-id'));
+```
+
+### RTK Query — auto API calls with caching
+
+```tsx
+import { useGetUsersQuery, useCreateUserMutation } from '@/store/endpoints/usersApi';
+
+function UserList() {
+  const { data, isLoading, error } from useGetUsersQuery();
+  const [createUser] = useCreateUserMutation();
+
+  // data is auto-cached, auto-refetched, auto-typed
+}
+```
+
+### Layouts — one line
+
+```tsx
+import { DashboardLayout } from '@/components/layouts/dashboard-layout';
+import { AuthLayout } from '@/components/layouts/auth-layout';
+
+// Full dashboard with sidebar + header
+<DashboardLayout><YourPage /></DashboardLayout>
+
+// Auth pages
+<AuthLayout title="Sign In"><LoginForm /></AuthLayout>
 ```
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── auth/               # Authentication pages (login, register, MFA, etc.)
-│   └── dashboard/          # Dashboard pages (analytics, billing, settings, admin, plugins)
+├── app/                    # Next.js pages
 ├── components/
-│   ├── ui/                 # ShadCN/UI base components
-│   ├── forms/              # Form components (FormField, SearchInput)
-│   ├── tables/             # Data table with sorting
-│   ├── charts/             # Chart widgets (StatCard, AreaChart, BarChart)
-│   ├── layouts/            # Layout components (DashboardLayout, AuthLayout, Sidebar, Header)
-│   ├── auth/               # Auth forms (Login, Register, ForgotPassword, ResetPassword, MFA)
-│   └── shared/             # Shared components (ThemeProvider, QueryProvider, PermissionGate, FeatureFlagGate)
-├── hooks/                  # Custom hooks (useAuth, usePermissions, useFeatureFlags, useToast)
-├── store/                  # Zustand stores (auth, tenant, notification, feature-flag)
+│   ├── ui/                 # Base UI (Button, Input, Alert, Skeleton, Loaders, etc.)
+│   ├── forms/              # SmartForm, FormField, SearchInput
+│   ├── tables/             # DataTable (sorting, filtering, pagination, search)
+│   ├── charts/             # StatCard, AreaChart, BarChart
+│   ├── layouts/            # DashboardLayout, AuthLayout, Sidebar, Header
+│   ├── auth/               # Login, Register, ForgotPassword, ResetPassword, MFA forms
+│   └── shared/             # ThemeProvider, ToastContainer, ModalContainer, PermissionGate
+├── hooks/                  # useAuth, usePermissions, useFeatureFlags, useToast, useDebounce, useMediaQuery, useLocalStorage
+├── store/
+│   ├── slices/             # Redux slices (auth, tenant, notification, featureFlag, ui)
+│   ├── endpoints/          # RTK Query API endpoints (authApi, usersApi)
+│   ├── api.ts              # RTK Query base config (auto-attaches tokens + tenant ID)
+│   └── store.ts            # Redux store with persistence
 ├── lib/
-│   ├── api/                # API client with Axios interceptors, endpoint definitions
-│   ├── sdk/                # SDK wrappers for all API endpoints
+│   ├── api/                # Axios client with interceptors
+│   ├── toast.ts            # Global toast API — toast.success() from anywhere
+│   ├── modal.ts            # Global modal API — modal.open() / confirm() from anywhere
 │   ├── auth/               # Token management
-│   ├── permissions/        # Permission checking utilities
-│   ├── feature-flags/      # Feature flag helpers
-│   ├── plugins/            # Plugin registry system
-│   ├── i18n/               # Internationalization (8 locales)
-│   └── utils/              # Formatting, secure storage utilities
-├── config/                 # App config (site, navigation, env, design tokens)
-├── types/                  # TypeScript type definitions
-├── tests/                  # Unit and E2E tests
-└── proxy.ts                # Route protection (Next.js 16 proxy)
+│   ├── permissions/        # Permission utilities
+│   ├── plugins/            # Plugin registry
+│   └── utils/              # Formatting, secure storage
+├── config/                 # App config, navigation, env, design tokens
+├── types/                  # TypeScript types
+└── proxy.ts                # Route protection
 ```
 
-## Core Features
+## Tree-Shaking
 
-### Authentication System
-- Login / Register / Forgot Password / Reset Password
-- Multi-Factor Authentication (MFA)
-- JWT token lifecycle with automatic refresh
-- Session management with timeout
-- Protected routes via proxy
+Only what you import gets bundled. Don't use `SmartForm`? It won't be in your build. Each component is a standalone module with no side effects.
 
-### Role-Based Access Control (RBAC)
-- 6 role levels: super_admin, admin, manager, member, viewer, guest
-- 40+ granular permissions
-- Permission-based component rendering (`<PermissionGate>`)
-- Role-based navigation filtering
-
-### Multi-Tenant Architecture
-- Tenant-aware API requests (X-Tenant-ID header)
-- Tenant switching UI
-- Tenant branding and theming
-- Isolated tenant settings
-
-### Plugin System
-- Dynamic module registration via `PluginRegistry`
-- Plugin routes, widgets, and menu items
-- Plugin configuration and lifecycle management
-- Category-based organization (analytics, billing, CRM, AI, etc.)
-
-### Design System
-- Dark/light/system theme support
-- Design tokens (colors, spacing, typography, shadows, breakpoints)
-- White-label branding support
-- Responsive layouts
-
-### State Management
-- Persisted auth state (Zustand + localStorage)
-- Tenant state management
-- Notification system with toast UI
-- Feature flag store
-
-### API Layer
-- Centralized Axios client with interceptors
-- Automatic token injection and refresh
-- Error normalization
-- Comprehensive endpoint definitions
-- Full SDK with typed methods
-
-### Internationalization
-- 8 supported locales: English, Spanish, French, German, Japanese, Chinese, Portuguese, Arabic
-- Typed translation keys
-- Easy to extend
-
-## Developer Automation
-
-Generate new pages, components, and modules:
-
-```bash
-# Generate a new page
-npm run generate:page UserProfile dashboard
-
-# Generate a new component
-npm run generate:component UserCard shared
-
-# Generate a new feature module (with types, manifest, and page)
-npm run generate:module invoicing
+```tsx
+// Only these 2 components get bundled:
+import { toast } from '@/lib/toast';
+import { DataTable } from '@/components/tables/data-table';
 ```
+
+## Built-in Features
+
+| Feature | How to use |
+|---------|-----------|
+| **Toast notifications** | `toast.success('Done!')` |
+| **Modal dialogs** | `modal.open(<Content />)` |
+| **Confirm dialogs** | `const ok = await confirm('Sure?', 'Message')` |
+| **Schema forms** | `<SmartForm fields={[...]} schema={zod} onSubmit={fn} />` |
+| **Data tables** | `<DataTable data={[]} columns={[]} searchable pagination />` |
+| **Alerts** | `<Alert variant="success">Text</Alert>` |
+| **Skeletons** | `<TableSkeleton />`, `<CardSkeleton />`, `<PageLoader />` |
+| **Auth** | `useAuth()` → login, logout, register, forgotPassword, resetPassword, verifyMfa |
+| **Permissions** | `usePermissions()` → hasPermission, hasRole |
+| **Feature flags** | `useFeatureFlags()` → isEnabled, getVariant |
+| **Dark/light theme** | Built-in via ThemeToggle, zero config |
+| **RBAC** | `<PermissionGate permissions={['users:write']}>` |
+| **Multi-tenant** | Auto X-Tenant-ID headers, tenant switching UI |
+| **API calls** | RTK Query endpoints — auto-cached, auto-typed |
+| **Route protection** | `proxy.ts` — auto-redirects unauthenticated users |
+| **i18n** | 8 locales built-in |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
+| `npm run dev` | Start dev server |
 | `npm run build` | Production build |
 | `npm start` | Start production server |
 | `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript type checking |
+| `npm run typecheck` | TypeScript type checking |
 | `npm test` | Run unit tests |
-| `npm run test:coverage` | Run tests with coverage |
-| `npm run test:e2e` | Run Playwright E2E tests |
-| `npm run generate:page` | Generate a new page |
-| `npm run generate:component` | Generate a new component |
-| `npm run generate:module` | Generate a new feature module |
-| `npm run docker:build` | Build Docker image |
-| `npm run docker:up` | Start production Docker container |
-| `npm run docker:dev` | Start development Docker container |
+| `npm run generate:page` | Generate new page |
+| `npm run generate:component` | Generate new component |
+| `npm run generate:module` | Generate new module |
+
+## Environment Variables
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000/api    # Your backend API URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000         # Frontend URL
+NEXT_PUBLIC_APP_NAME=My App                      # App name
+```
+
+See `.env.example` for all available options.
 
 ## Docker
 
 ```bash
-# Production build and run
-docker compose build
-docker compose up -d
-
-# Development with hot reload
-docker compose --profile dev up
+docker compose up -d          # Run production
+docker compose --profile dev up  # Run development
 ```
-
-## Environment Variables
-
-Copy `.env.example` to `.env.local` and configure:
-
-```bash
-cp .env.example .env.local
-```
-
-Key variables:
-- `NEXT_PUBLIC_APP_URL` — Application URL (default: http://localhost:3000)
-- `NEXT_PUBLIC_API_URL` — Backend API URL (default: http://localhost:4000/api)
-- `NEXT_PUBLIC_ENABLE_*` — Feature flags for MFA, plugins, billing, analytics
-
-## CI/CD
-
-GitHub Actions workflow included (`.github/workflows/ci.yml`):
-- Lint → Type Check → Build + Test (parallel)
-- Runs on push/PR to main and develop branches
-
-## Architecture Decisions
-
-- **Next.js 16 App Router** — Server/client components, proxy-based route protection
-- **Zustand over Redux** — Simpler API, built-in persistence, smaller bundle
-- **ShadCN/UI v4** — Uses @base-ui/react primitives, fully customizable
-- **Axios over fetch** — Request/response interceptors for auth token lifecycle
-- **Zod + React Hook Form** — Type-safe form validation
-
-## Future Use Cases
-
-This platform is designed as a foundation for:
-- SaaS Dashboards
-- Admin Panels
-- CRM / ERP Systems
-- Billing & Subscription Management
-- Analytics Platforms
-- Internal Tools
-- Client Portals
-- AI Governance Plugins
-- Plugin Marketplaces
-- White-Label Products
-
-## License
-
-Private — Internal company use.

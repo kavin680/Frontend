@@ -67,7 +67,7 @@ export function Sidebar({ className }: SidebarProps) {
 
   const canAccess = (item: MenuItem): boolean => {
     if (!item.permissions || item.permissions.length === 0) return true;
-    return hasAnyPermission(item.permissions as Permission[]);
+    return hasAnyPermission(...(item.permissions as Permission[]));
   };
 
   const renderMenuItem = (item: MenuItem, depth = 0) => {

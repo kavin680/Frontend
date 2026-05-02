@@ -14,9 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
-import { useAuthStore } from '@/store/auth-store';
-import { useTenantStore } from '@/store/tenant-store';
-import { useNotificationStore } from '@/store/notification-store';
+import { useAppSelector, useAppDispatch, tenantActions } from '@/store';
 import { useAuth } from '@/hooks/use-auth';
 
 interface HeaderProps {
@@ -24,9 +22,11 @@ interface HeaderProps {
 }
 
 export function Header({ className }: HeaderProps) {
-  const { user } = useAuthStore();
-  const { current: tenant, available: tenants, switchTenant } = useTenantStore();
-  const { unreadCount } = useNotificationStore();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const tenant = useAppSelector((state) => state.tenant.current);
+  const tenants = useAppSelector((state) => state.tenant.available);
+  const unreadCount = useAppSelector((state) => state.notification.unreadCount);
   const { logout } = useAuth();
 
   const initials = user
@@ -62,7 +62,7 @@ export function Header({ className }: HeaderProps) {
               {tenants.map((t) => (
                 <DropdownMenuItem
                   key={t.id}
-                  onClick={() => switchTenant(t.id)}
+                  onClick={() => dispatch(tenantActions.switchTenant(t.id))}
                 >
                   {t.name}
                   {t.id === tenant?.id && (
