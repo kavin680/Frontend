@@ -16,6 +16,7 @@
     "generate:page": "node scripts/generators/generate-page.js",
     "generate:component": "node scripts/generators/generate-component.js",
     "generate:module": "node scripts/generators/generate-module.js",
+    "generate:crud": "node scripts/generators/generate-crud.js",
     "docker:dev": "docker compose --profile dev up",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
