@@ -16,9 +16,12 @@
     "generate:page": "node scripts/generators/generate-page.js",
     "generate:component": "node scripts/generators/generate-component.js",
     "generate:module": "node scripts/generators/generate-module.js",
+    "generate:crud": "node scripts/generators/generate-crud.js",
     "docker:dev": "docker compose --profile dev up",
     "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d"
+    "docker:up": "docker compose up -d",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -61,6 +64,12 @@
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",
-    "typescript": "^5"
+    "typescript": "^5",
+    "storybook": "^10.3.6",
+    "@storybook/react-webpack5": "^10.3.6",
+    "@storybook/addon-webpack5-compiler-swc": "^4.0.3",
+    "@storybook/addon-a11y": "^10.3.6",
+    "@storybook/addon-docs": "^10.3.6",
+    "eslint-plugin-storybook": "^10.3.6"
   }
 }
