@@ -69,7 +69,7 @@ export const navigationConfig: NavigationConfig = {
           id: 'audit',
           label: 'Audit Log',
           icon: 'ScrollText',
-          path: '/dashboard/admin/audit',
+          path: '/dashboard/audit',
           permissions: ['audit:read'],
         },
       ],
