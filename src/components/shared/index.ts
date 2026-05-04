@@ -6,3 +6,4 @@ export { ThemeToggle } from './theme-toggle';
 export { PermissionGate } from './permission-gate';
 export { FeatureFlagGate } from './feature-flag-gate';
 export { ErrorBoundary } from './error-boundary';
+export { SkipToContent } from './skip-to-content';

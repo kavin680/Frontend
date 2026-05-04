@@ -49,12 +49,19 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none">
+    <div
+      aria-live="polite"
+      aria-label="Notifications"
+      role="status"
+      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none"
+    >
       {toasts.map((t) => {
         const Icon = icons[t.type];
         return (
           <div
             key={t.id}
+            role="alert"
+            aria-atomic="true"
             className={cn(
               'pointer-events-auto flex items-start gap-3 rounded-lg border-l-4 p-4 shadow-lg',
               'transition-all duration-300 ease-out',
@@ -64,7 +71,7 @@ export function ToastContainer() {
               colors[t.type]
             )}
           >
-            <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+            <Icon className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">{t.title}</p>
               {t.message && <p className="text-sm mt-1 opacity-90">{t.message}</p>}
@@ -73,8 +80,9 @@ export function ToastContainer() {
               <button
                 onClick={() => dismiss(t.id)}
                 className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+                aria-label={`Dismiss ${t.title}`}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
