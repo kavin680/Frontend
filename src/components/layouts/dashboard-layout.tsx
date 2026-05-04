@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { AutoBreadcrumb } from '@/components/shared/auto-breadcrumb';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,7 +15,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main id="main-content" className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main id="main-content" className="flex-1 overflow-y-auto p-6">
+          <AutoBreadcrumb />
+          {children}
+        </main>
       </div>
     </div>
   );
