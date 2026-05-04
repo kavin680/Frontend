@@ -29,6 +29,20 @@ export const usersApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: data,
       }),
+      // Optimistic update: reflect changes immediately, rollback on failure
+      async onQueryStarted({ id, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          usersApi.util.updateQueryData('getUsers', undefined, (draft) => {
+            const user = draft.data?.find((u: User) => u.id === id);
+            if (user) Object.assign(user, data);
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'User', id },
         'Users',
@@ -39,6 +53,22 @@ export const usersApi = apiSlice.injectEndpoints({
         url: `/users/${id}`,
         method: 'DELETE',
       }),
+      // Optimistic delete: remove from list immediately, rollback on failure
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          usersApi.util.updateQueryData('getUsers', undefined, (draft) => {
+            if (draft.data) {
+              const idx = draft.data.findIndex((u: User) => u.id === id);
+              if (idx !== -1) draft.data.splice(idx, 1);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: ['Users'],
     }),
   }),
