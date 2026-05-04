@@ -31,7 +31,14 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env*.local
+
+# storybook
+storybook-static
+
+# playwright
+/test-results/
+/playwright-report/
 
 # vercel
 .vercel
@@ -39,3 +46,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+test-plan.md
+.github/workflows/
+
+*storybook.log
