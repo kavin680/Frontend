@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/shared/theme-provider';
 import { QueryProvider } from '@/components/shared/query-provider';
 import { ToastContainer } from '@/components/shared/toast-container';
 import { ModalContainer } from '@/components/shared/modal-container';
+import { CommandPalette } from '@/components/shared/command-palette';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface ProvidersProps {
@@ -21,6 +22,7 @@ export function Providers({ children }: ProvidersProps) {
             {children}
             <ToastContainer />
             <ModalContainer />
+            <CommandPalette />
           </TooltipProvider>
         </QueryProvider>
       </ThemeProvider>

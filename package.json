@@ -13,6 +13,8 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:visual": "playwright test visual-regression --update-snapshots",
+    "test:visual:check": "playwright test visual-regression",
     "generate:page": "node scripts/generators/generate-page.js",
     "generate:component": "node scripts/generators/generate-component.js",
     "generate:module": "node scripts/generators/generate-module.js",
